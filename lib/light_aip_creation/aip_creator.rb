@@ -6,10 +6,9 @@ require 'fileutils'
 class LightAipCreation::AipCreator
   class BagInvalid < StandardError; end
 
-  def initialize(noid, workdir)
-    @noid = noid
+  def initialize(workdir, noid = '')
     @work_dir = workdir
-    @aip_directory="#{@work_dir}/#{@noid}"
+    @aip_directory="#{@work_dir}/#{noid}"
   end
 
   def bag_tar_aip_dir(aip_directory)
@@ -34,7 +33,7 @@ class LightAipCreation::AipCreator
     tar_aip_filename = File.expand_path(aip_filename)
 
     Dir.chdir(@work_dir) do
-      Minitar.pack(@noid, File.open(tar_aip_filename, 'wb'))
+      Minitar.pack(@aip_directory, File.open(tar_aip_filename, 'wb'))
     end
   end
 
