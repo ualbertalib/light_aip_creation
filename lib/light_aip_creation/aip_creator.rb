@@ -37,7 +37,7 @@ class LightAipCreation::AipCreator
   end
 
   def assemble_aip(options)
-
+    validate_files
     make_aip_dirs
     copy_aip_files
     rm_aip_dir
@@ -45,18 +45,16 @@ class LightAipCreation::AipCreator
 
   ### AIP Directories
   def aip_dirs
-      @aip_dirs = {
-        objects: "#{@aip_directory}/data/objects",
-        metadata: "#{@aip_directory}/data/objects/metadata",
-        logs: "#{@aip_directory}/data/logs",
-        thumbnails: "#{@aip_directory}/data/thumbnails"
-      }
+      @aip_dirs = [
+        "#{@aip_directory}/data/objects",
+        "#{@aip_directory}/data/objects/metadata",
+        "#{@aip_directory}/data/logs",
+        "#{@aip_directory}/data/thumbnails"
+      ]
   end
 
   def make_aip_dirs
-    aip_dirs.each_value do |path|
-      FileUtils.mkdir_p(path)
-    end
+    aip_dirs.each { |path| FileUtils.mkdir_p(path) }
   end
 
   def rm_aip_dir
@@ -65,63 +63,70 @@ class LightAipCreation::AipCreator
   end
 
   ### AIP Files
-  def aip_paths
-    @aip_paths = {
+  def aip_files
+    @aip_files = [
       # required files
-      content: {
-        remote: @options[:contnet],
-        local: "#{@aip_directory}/#{File.basename(@options[:contnet])}",
-        optional: false
-      },
-      object_metadata: {
+      # object_metadata
+      {
         remote: @options[:object_metadata],
         local: "#{aip_dirs.metadata}/object_metadata.n3",
-        optional: false
+        required: true
       },
-      fixity: {
+      # fixity
+      {
         remote: @options[:fixity],
         local: "#{aip_dirs.logs}/content_fixity_report.n3",
-        optional: false
+        required: true
       },
-      content_datastream_metadata: {
+      #content_datastream_metadata
+      {
         remote: @options[:content_meta],
         local: "#{aip_dirs.metadata}/content_fcr_metadata.n3",
-        optional: false
+        required: true
       },
-      versions: {
+      #versions
+      {
         remote: @options[:versions],
         local: "#{aip_dirs.metadata}/content_versions.n3",
-        optional: false
+        required: true
       },
       # optional files
-      thumbnail: {
+      # thumbnail
+      {
         remote: @options[:thumbnail],
         local: "#{aip_dirs.thumbnails}/thumbnail",
-        optional: true
+        required: false
       },
-      characterization: {
+      #characterization
+      {
         remote: @options[:characterization],
         local: "#{aip_dirs.logs}/content_characterization.n3",
-        optional: true
+        required: false
       }
-    }
-    @options[:permissions]&.each do |key, value|
-      @aip_paths[:key] = {
-        remote: value,
-        local: "#{aip_dirs.metadata}/#{File.basename(value)}",
-        optional: true
-      }
+    ]
+
+    @options[:content]&.each do | value |
+        @aip_files.push(
+          remote: value,
+          local: "#{@aip_directory}/#{File.basename(@options[value])}",
+          required: true
+        )
+    end
+
+    @options[:permissions]&.each do | value |
+        @aip_files.push(
+          remote: value,
+          local: "#{aip_dirs.metadata}/#{File.basename(value)}",
+          required: false
+        )
     end
   end
 
-  def  copy_aip_files
-    @aip_paths.each_value do |file|
-      if !file[:optional]
-        FileUtils.cp(file[:remote], file[:local])
-      else
-        FileUtils.cp(file[:remote], file[:local]) unless file[:remote].nil?
-      end
-    end
+  def copy_aip_files
+    @aip_files.each { |file| FileUtils.cp(file[:remote], file[:local]) unless file[:remote].nil? }
   end
 
+  def validate_files
+      @aip_files.each { |file| raise "missing file #{file[:remote]}" if file[:required] && file[:remot].nil? }
+  end
 end
